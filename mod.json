@@ -2,7 +2,7 @@
   "id": "online_tracker",
   "name": "Online Tracker",
   "description": "Tracks online activity and received gifts, storing only data visible to you while online.",
-  "version": "0.1.06",
+  "version": "0.1.6",
   "author": "XξИӦĜεй三尺Šĭ乌",
   "api": "1.5",
   "entry": "Main",
