@@ -1,0 +1,10 @@
+{
+  "id": "online_tracker",
+  "name": "Online Tracker",
+  "description": "What the mod does, in one line.",
+  "version": "0.1.0",
+  "author": "XξИӦĜεй三尺Šĭ乌",
+  "api": "1.5",
+  "entry": "Main",
+  "uses": []
+}
