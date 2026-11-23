@@ -155,14 +155,6 @@ class Main extends Mod {
     // Find new gifts
     var newGiftIds = activityStore.isNewGift(giftIds);
 
-    if (newGiftIds.length > 0) {
-        context.log("Found " + newGiftIds.length + " new gifts!");
-
-        for (giftId in newGiftIds) {
-            context.log("New gift ID: " + giftId);
-        }
-    }
-
     // Save all currently available gift IDs
     activityStore.recordGifts(giftIds);
 
@@ -328,8 +320,6 @@ class Main extends Mod {
         // Create an independent UIButton
         var button = new UIButton(cast facade, cast extraMC);
 
-        context.log("Extra button created successfully!");
-
         return button;
     }
 
@@ -378,7 +368,6 @@ class Main extends Mod {
 
             if (friend != null && friend.id == accountId) {
                 selected.add(index, true);
-                context.log("Friend selected: " + accountId + " at index " + index);
                 break;
             }
         }
@@ -507,8 +496,6 @@ class Main extends Mod {
         currentPopulater = populater;
         leastActiveButton = extraButton;
         leastActiveRoot = extraRoot;
-
-        context.log("LEAST ACTIVE button attached!");
     }
 
     private function setDate(populater:Dynamic):Void {
