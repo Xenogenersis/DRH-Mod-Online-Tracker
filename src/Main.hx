@@ -96,86 +96,80 @@ class Main extends Mod {
         });
     }
 
-    private function loadGifts(accountInfo:Dynamic):Void {
+   private function loadGifts(accountInfo:Dynamic):Void {
 
-        if (accountInfo == null) {
-            context.log("ERROR: accountInfo is null!");
-            return;
-        }
-
-        var getGiftData = Reflect.field(accountInfo, "getGiftData");
-
-        if (getGiftData == null) {
-            context.log("ERROR: getGiftData is null!");
-            return;
-        }
-
-        Reflect.callMethod(accountInfo, getGiftData, [function() {
-
-            var gifts:Dynamic = Reflect.getProperty(accountInfo, "gifts");
-
-            if (gifts == null) {
-                context.log("ERROR: gifts is null!");
-                return;
-            }
-
-            var keysToArray = Reflect.field(gifts, "keysToArray");
-
-            if (keysToArray == null) {
-                context.log("ERROR: keysToArray is null!");
-                return;
-            }
-
-            var itemFor = Reflect.field(gifts, "itemFor");
-
-            if (itemFor == null) {
-                context.log("ERROR: itemFor is null!");
-                return;
-            }
-
-            var keys:Dynamic = Reflect.callMethod(gifts, keysToArray, []);
-
-            if (keys == null) {
-                context.log("ERROR: keys is null!");
-                return;
-            }
-
-            var giftIds:Array<Dynamic> = [];
-            var accountIds:Array<UInt> = [];
-
-            for (key in keys) {
-                var gift:Dynamic = Reflect.callMethod(gifts, itemFor, [key]);
-
-                var fromAccountId:UInt = Reflect.getProperty(gift, "mFromAccountId");
-                var offerId:UInt = Reflect.getProperty(gift, "mOfferId");
-                var requestId:String = Reflect.getProperty(gift, "mRequestId");
-
-                var giftId = fromAccountId + "_" + offerId + "_" + requestId;
-
-                giftIds.push(giftId);
-                accountIds.push(fromAccountId);
-            }
-
-            // Neue Geschenke ermitteln
-            var newGiftIds = activityStore.isNewGift(giftIds);
-
-            if (newGiftIds.length > 0) {
-                context.log("Found " + newGiftIds.length + " new gifts!");
-
-                for (giftId in newGiftIds) {
-                    context.log("New gift ID: " + giftId);
-                }
-            }
-
-            // Alle aktuell vorhandenen Geschenk-IDs speichern
-            activityStore.recordGifts(giftIds);
-
-            // Absender-Aktivitäten speichern
-            if (accountIds.length > 0) {
-                activityStore.recordActivities(accountIds);
-            }
-        }]);
+    if (accountInfo == null) {
+        context.log("ERROR: accountInfo is null!");
+        return;
     }
+
+    // Read the locally cached gifts
+    var gifts:Dynamic = Reflect.getProperty(accountInfo, "gifts");
+
+    if (gifts == null) {
+        context.log("ERROR: gifts is null!");
+        return;
+    }
+
+    var keysToArray = Reflect.field(gifts, "keysToArray");
+
+    if (keysToArray == null) {
+        context.log("ERROR: keysToArray is null!");
+        return;
+    }
+
+    var itemFor = Reflect.field(gifts, "itemFor");
+
+    if (itemFor == null) {
+        context.log("ERROR: itemFor is null!");
+        return;
+    }
+
+    var keys:Dynamic = Reflect.callMethod(gifts, keysToArray, []);
+
+    if (keys == null) {
+        context.log("ERROR: keys is null!");
+        return;
+    }
+
+    var giftIds:Array<Dynamic> = [];
+    var accountIds:Array<UInt> = [];
+
+    for (key in keys) {
+        var gift:Dynamic = Reflect.callMethod(gifts, itemFor, [key]);
+
+        if (gift == null)
+            continue;
+
+        var requestId:String = Reflect.getProperty(gift, "mRequestId");
+        var fromAccountId:UInt = Reflect.getProperty(gift, "mFromAccountId");
+
+        if (requestId == null)
+            continue;
+
+        giftIds.push(requestId);
+        accountIds.push(fromAccountId);
+
+    }
+
+    // Find new gifts
+    var newGiftIds = activityStore.isNewGift(giftIds);
+
+    if (newGiftIds.length > 0) {
+        context.log("Found " + newGiftIds.length + " new gifts!");
+
+        for (giftId in newGiftIds) {
+            context.log("New gift ID: " + giftId);
+        }
+    }
+
+    // Save all currently available gift IDs
+    activityStore.recordGifts(giftIds);
+
+    // Save sender activities
+    if (accountIds.length > 0)
+        activityStore.recordActivities(accountIds);
+}
 
     private function loadOnline(accountInfo:Dynamic):Void {
         var friendsInfo:Dynamic = Reflect.field(accountInfo, "mFriendsInfo");
