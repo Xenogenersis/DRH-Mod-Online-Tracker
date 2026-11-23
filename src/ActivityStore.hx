@@ -110,9 +110,6 @@ class ActivityStore {
                 knownGiftIds.set(Std.string(giftId), true);
             }
         }
-
-        context.log("Loaded " + lastOnlineDates.length + " activity entries!");
-        context.log("Loaded " + knownGiftIds.keys().length + " gift IDs!");
     }
 
     // Record last online date
