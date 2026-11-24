@@ -2,12 +2,16 @@
 package mods.online_tracker;
 
 import mods.api.Context;
+
 import brain.stateMachine.State;
 import brain.uI.UIButton;
+
 import flash.text.TextField;
 import flash.text.TextFormat;
-import openfl.events.Event;
 import flash.filters.GlowFilter;
+
+import openfl.events.Event;
+
 import account.FriendInfo;
 
 class LeastActiveOverlay {
@@ -25,26 +29,22 @@ class LeastActiveOverlay {
     private var lastDisplayedPage:Int = -1;
     private var lastDisplayedPopulater:Dynamic = null;
 
-    public function new(
-        context:Context,
-        activityStore:ActivityStore
-    ) {
+    public function new(context:Context, activityStore:ActivityStore) {
         this.context = context;
         this.activityStore = activityStore;
     }
 
-    // Wird aufgerufen, wenn der SocialState betreten wird
+    // --------------------------------
+    // Start and stop overlay updates
+    // --------------------------------
+
     public function start(state:State):Void {
         currentSocial = state;
         frameCounter = 0;
 
-        context.overlay.addEventListener(
-            Event.ENTER_FRAME,
-            updateListener
-        );
+        context.overlay.addEventListener(Event.ENTER_FRAME, updateListener);
     }
 
-    // Wird aufgerufen, wenn der SocialState verlassen wird
     public function stop():Void {
         context.overlay.removeEventListener(
             Event.ENTER_FRAME,
@@ -71,31 +71,39 @@ class LeastActiveOverlay {
         }
     };
 
+    // --------------------------------
+    // Update friend list information
+    // --------------------------------
+
     private function updateFriendIds():Void {
-        if (!context.core.alive || currentSocial == null)
+        if (!context.core.alive || currentSocial == null) {
             return;
+        }
 
         var manager:Dynamic = Reflect.field(
             currentSocial,
             "mUIFriendManager"
         );
 
-        if (manager == null || manager.currentState != 1)
+        if (manager == null || manager.currentState != 1) {
             return;
+        }
 
         var states:Dynamic = Reflect.field(manager, "states");
         var friends:Dynamic = states == null ? null : states.itemFor(1);
 
-        if (friends == null)
+        if (friends == null) {
             return;
+        }
 
         var populater:Dynamic = Reflect.field(
             friends,
             "mFriendPopulater"
         );
 
-        if (populater == null)
+        if (populater == null) {
             return;
+        }
 
         var currentPage:Int = populater.mCurrentPage;
 
@@ -113,22 +121,25 @@ class LeastActiveOverlay {
     }
 
     // --------------------------------
-    // Freund mit geringster Aktivität auswählen
+    // Select the friend with the lowest activity
     // --------------------------------
 
     private function selectLeastActive():Void {
-        if (currentSocial == null)
+        if (currentSocial == null) {
             return;
+        }
 
         var accountIds = getAllFriendIds(currentSocial);
 
-        if (accountIds == null || accountIds.length == 0)
+        if (accountIds == null || accountIds.length == 0) {
             return;
+        }
 
         var selectedId = activityStore.getLeastActiveAccount(accountIds);
 
-        if (selectedId == null)
+        if (selectedId == null) {
             return;
+        }
 
         selectFriendById(currentSocial, selectedId);
     }
@@ -139,36 +150,41 @@ class LeastActiveOverlay {
             "mUIFriendManager"
         );
 
-        if (manager == null)
+        if (manager == null) {
             return [];
+        }
 
         var states:Dynamic = Reflect.field(manager, "states");
         var friends:Dynamic = states == null ? null : states.itemFor(1);
 
-        if (friends == null)
+        if (friends == null) {
             return [];
+        }
 
         var populater:Dynamic = Reflect.field(
             friends,
             "mFriendPopulater"
         );
 
-        if (populater == null)
+        if (populater == null) {
             return [];
+        }
 
         var allFriends:Dynamic = Reflect.field(
             populater,
             "mListOfFriends"
         );
 
-        if (allFriends == null)
+        if (allFriends == null) {
             return [];
+        }
 
         var accountIds:Array<UInt> = [];
 
         for (friend in allFriends) {
-            if (friend != null)
+            if (friend != null) {
                 accountIds.push(friend.id);
+            }
         }
 
         return accountIds;
@@ -178,30 +194,34 @@ class LeastActiveOverlay {
         state:State,
         accountId:UInt
     ):Void {
-        if (state == null)
+        if (state == null) {
             return;
+        }
 
         var manager:Dynamic = Reflect.field(
             state,
             "mUIFriendManager"
         );
 
-        if (manager == null)
+        if (manager == null) {
             return;
+        }
 
         var states:Dynamic = Reflect.field(manager, "states");
         var friends:Dynamic = states == null ? null : states.itemFor(1);
 
-        if (friends == null)
+        if (friends == null) {
             return;
+        }
 
         var populater:Dynamic = Reflect.field(
             friends,
             "mFriendPopulater"
         );
 
-        if (populater == null)
+        if (populater == null) {
             return;
+        }
 
         var allFriends:Dynamic = Reflect.field(
             populater,
@@ -213,8 +233,9 @@ class LeastActiveOverlay {
             "mFriendsSelectedAcrossPages"
         );
 
-        if (allFriends == null || selected == null)
+        if (allFriends == null || selected == null) {
             return;
+        }
 
         selected.clear();
 
@@ -229,7 +250,7 @@ class LeastActiveOverlay {
     }
 
     // --------------------------------
-    // Overlay erstellen und verwalten
+    // Create and manage the overlay button
     // --------------------------------
 
     private function ensureLeastActiveButton(populater:Dynamic):Void {
@@ -238,15 +259,17 @@ class LeastActiveOverlay {
             "mFriendPopulaterMC"
         );
 
-        if (mc == null)
+        if (mc == null) {
             return;
+        }
 
         var options:Dynamic = mc.getChildByName(
             "fm_selection_options"
         );
 
-        if (options == null)
+        if (options == null) {
             return;
+        }
 
         if (
             currentPopulater == populater &&
@@ -268,19 +291,22 @@ class LeastActiveOverlay {
 
         var textField:TextField = getFriendSelectField(populater);
 
-        if (noneButton == null || allButton == null || textField == null)
+        if (noneButton == null || allButton == null || textField == null) {
             return;
+        }
 
         var noneRoot:Dynamic = Reflect.field(noneButton, "mRoot");
         var allRoot:Dynamic = Reflect.field(allButton, "mRoot");
 
-        if (noneRoot == null || allRoot == null)
+        if (noneRoot == null || allRoot == null) {
             return;
+        }
 
         var extraButton:UIButton = createExtraButton(populater);
 
-        if (extraButton == null)
+        if (extraButton == null) {
             return;
+        }
 
         extraButton.releaseCallback = function():Void {
             selectLeastActive();
@@ -288,8 +314,9 @@ class LeastActiveOverlay {
 
         var extraRoot:Dynamic = Reflect.field(extraButton, "mRoot");
 
-        if (extraRoot == null)
+        if (extraRoot == null) {
             return;
+        }
 
         noneRoot.x += 50;
         extraRoot.x -= 40;
@@ -304,23 +331,26 @@ class LeastActiveOverlay {
     private function getFriendSelectField(
         populater:Dynamic
     ):TextField {
-        if (populater == null)
+        if (populater == null) {
             return null;
+        }
 
         var mc:Dynamic = Reflect.field(
             populater,
             "mFriendPopulaterMC"
         );
 
-        if (mc == null)
+        if (mc == null) {
             return null;
+        }
 
         var options:Dynamic = mc.getChildByName(
             "fm_selection_options"
         );
 
-        if (options == null)
+        if (options == null) {
             return null;
+        }
 
         return cast options.getChildByName("txt_select");
     }
@@ -341,51 +371,59 @@ class LeastActiveOverlay {
             "mTownStateMachine"
         );
 
-        if (mc == null || facade == null || townStateMachine == null)
+        if (mc == null || facade == null || townStateMachine == null) {
             return null;
+        }
 
         var options:Dynamic = mc.getChildByName(
             "fm_selection_options"
         );
 
-        if (options == null)
+        if (options == null) {
             return null;
+        }
 
         var original:Dynamic = options.getChildByName("button_all");
 
-        if (original == null)
+        if (original == null) {
             return null;
+        }
 
         var asset:Dynamic = townStateMachine.getTownAsset(
             "friends_populater"
         );
 
-        if (asset == null)
+        if (asset == null) {
             return null;
+        }
 
         var tempMC:Dynamic = ASCompat.createInstance(asset, []);
 
-        if (tempMC == null)
+        if (tempMC == null) {
             return null;
+        }
 
         var tempOptions:Dynamic = tempMC.getChildByName(
             "fm_selection_options"
         );
 
-        if (tempOptions == null)
+        if (tempOptions == null) {
             return null;
+        }
 
         var extraMC:Dynamic = tempOptions.getChildByName(
             "button_all"
         );
 
-        if (extraMC == null)
+        if (extraMC == null) {
             return null;
+        }
 
         var label:Dynamic = extraMC.getChildByName("label");
 
-        if (label == null)
+        if (label == null) {
             return null;
+        }
 
         label.text = "LEAST ACTIVE";
         label.wordWrap = false;
@@ -402,8 +440,9 @@ class LeastActiveOverlay {
         for (stateName in states) {
             var buttonState:Dynamic = extraMC.getChildByName(stateName);
 
-            if (buttonState != null)
+            if (buttonState != null) {
                 buttonState.scaleX *= widthFactor;
+            }
         }
 
         tempOptions.removeChild(extraMC);
@@ -416,7 +455,7 @@ class LeastActiveOverlay {
     }
 
     // --------------------------------
-    // Datumsfelder in Freundesliste
+    // Display activity dates in the friend list
     // --------------------------------
 
     private function setDate(populater:Dynamic):Void {
@@ -435,25 +474,29 @@ class LeastActiveOverlay {
             "mCurrentPage"
         );
 
-        if (friends == null || slots == null)
+        if (friends == null || slots == null) {
             return;
+        }
 
         for (slotIndex in 0...slots.length) {
             var friendIndex = page * 15 + slotIndex;
 
-            if (friendIndex >= friends.length)
+            if (friendIndex >= friends.length) {
                 break;
+            }
 
             var friend:Dynamic = friends[friendIndex];
             var slot:Dynamic = slots[slotIndex];
 
-            if (friend == null || slot == null)
+            if (friend == null || slot == null) {
                 continue;
+            }
 
             var accountId = Reflect.getProperty(friend, "id");
 
-            if (accountId == null)
+            if (accountId == null) {
                 continue;
+            }
 
             var idText:TextField = cast slot.getChildByName(
                 "gift_tracker_date"
