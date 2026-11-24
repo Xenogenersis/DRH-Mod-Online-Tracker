@@ -13,13 +13,14 @@ import town.HomeState;
 
 import account.GiftInfo;
 
+import flash.events.Event;
+
 class Main extends Mod {
 
     private var context:Context;
     private var activityStore:ActivityStore;
     private var leastActiveOverlay:LeastActiveOverlay;
 
-    public static var externalGifts:Array<GiftInfo> = [];
 
     override public function init(context:Context):Void {
         this.context = context;
@@ -83,20 +84,6 @@ class Main extends Mod {
             if (Type.getClassName(Type.getClass(state)) == "town.SocialSubState") {
                 leastActiveOverlay.start(state);
             }
-            if (Std.isOfType(state, HomeState)) {
-                var homeState:HomeState = cast state;
-                var accountInfo = homeState.mDBFacade.dbAccountInfo;
-                var giftCollector = Type.resolveClass("mods.gift_collector.Main");
-                if (giftCollector != null)
-                    return;
-
-        
-                accountInfo.getGiftData(function() {
-                    context.log("Gift data successfully loaded!");
-                    loadGifts(accountInfo);
-                });
-            }
-
         });
 
         context.core.onStateExit(function(machine:StateMachine, state:State) {
@@ -104,14 +91,6 @@ class Main extends Mod {
             // Handle leaving the social state
             if (Type.getClassName(Type.getClass(state)) == "town.SocialSubState") {
                 leastActiveOverlay.stop();
-            }
-
-            // Handle leaving the home state
-            if (Std.isOfType(state, HomeState)) {
-                var homeState:HomeState = cast state;
-                var accountInfo = homeState.mDBFacade.dbAccountInfo;
-
-                getFriendDataFromExternal();
             }
         });
     }
@@ -135,26 +114,28 @@ class Main extends Mod {
 
         accountInfo.getGiftData(function() {
             context.log("Gift data successfully loaded from the server!");
+
             loadGifts(accountInfo);
+
+            var facade:Dynamic = Reflect.getProperty(context.core, "facade");
+            var eventManager:Dynamic = Reflect.getProperty(facade, "eventManager");
+
+            if (eventManager == null) {
+                context.log("ERROR: eventManager is null!");
+                return;
+            }
+
+            var event = new Event("GIFTS_LOADED_EVENT");
+
+            var dispatchMethod = Reflect.field(eventManager, "dispatchEvent");
+
+            if (dispatchMethod != null) {
+                Reflect.callMethod(eventManager, dispatchMethod, [event]);
+                context.log("GIFTS_LOADED_EVENT dispatched!");
+            } else {
+                context.log("ERROR: dispatchEvent is null!");
+            }
         });
-    }
-
-    override public function dispose():Void {
-        var facade:Dynamic = Reflect.getProperty(context.core, "facade");
-
-        if (facade == null) {
-            context.log("ERROR: facade is null!");
-            return;
-        }
-
-        var accountInfo:Dynamic = Reflect.field(facade, "mDBAccountInfo");
-
-        if (accountInfo == null) {
-            context.log("ERROR: dbAccountInfo is null!");
-            return;
-        }
-
-        getFriendDataFromExternal();
     }
 
     // --------------------------------
@@ -257,74 +238,5 @@ class Main extends Mod {
         context.log("Friend ID: " + Std.string(friendId));
 
         activityStore.recordActivities(friendId);
-    }
-
-    // --------------------------------
-    // External gift handling
-    // --------------------------------
-
-    private function getFriendDataFromExternal():Void {
-        var gifts:Array<GiftInfo> = cast getOtherVariable("externalGifts");
-        var giftIds:Array<String> = activityStore.getAllGiftIds();
-        var accountIds:Array<UInt> = [];
-
-        if (gifts == null) {
-            context.log("ERROR: Could not retrieve external gift data!");
-            return;
-        }
-
-        for (gift in gifts) {
-            if (gift == null) {
-                continue;
-            }
-
-            var requestId:String = Reflect.getProperty(gift, "mRequestId");
-
-            if (requestId == null || giftIds.contains(requestId)) {
-                continue;
-            }
-
-            var accountId:UInt = Reflect.getProperty(gift, "mFromAccountId");
-
-            accountIds.push(accountId);
-        }
-
-        if (accountIds.length > 0) {
-            activityStore.recordActivities(accountIds);
-        }
-    }
-
-    // --------------------------------
-    // Cross-mod variable access
-    // --------------------------------
-
-    private function getOtherVariable(name:String):Dynamic {
-        var cls = Type.resolveClass("mods.online_tracker.Main");
-
-        if (cls == null) {
-            context.log("ERROR: OnlineTracker class not found!");
-            return null;
-        }
-
-        var value = Reflect.field(cls, name);
-
-        if (value == null) {
-            context.log("ERROR: Field '" + name + "' not found or is null!");
-            return null;
-        }
-
-        if (Std.isOfType(value, Array)) {
-            var result:Array<Dynamic> = (cast value:Array<Dynamic>).copy();
-
-            // Clear the original array
-            (cast value:Array<Dynamic>).resize(0);
-
-            return result;
-        }
-
-        // Reset other variable types to null
-        Reflect.setField(cls, name, null);
-
-        return value;
     }
 }
