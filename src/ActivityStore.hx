@@ -3,6 +3,7 @@ package mods.online_tracker;
 import haxe.Json;
 import sys.io.File;
 import sys.FileSystem;
+import mods.api.Context;
 
 private typedef ActivityEntry = {
     var accountId:String;
@@ -226,25 +227,37 @@ class ActivityStore {
         return oldestId;
     }
 
-    public function isNewGift(giftIds:Array<Dynamic>):Array<Dynamic> {
-        var newGiftIds:Array<Dynamic> = [];
+    public function getAllGiftIds():Array<String> {
+        var giftIds:Array<String> = [];
 
+        for (giftId in knownGiftIds.keys()) {
+            giftIds.push(giftId);
+        }
+
+        return giftIds;
+    }
+
+
+    public function syncGifts(giftIds:Array<Dynamic>):Void {
+        var currentGiftIds = new Map<String, Bool>();
+
+        // Alle aktuell vorhandenen Gifts merken
         for (giftId in giftIds) {
-            if (!knownGiftIds.exists(Std.string(giftId))) {
-                newGiftIds.push(giftId);
+            currentGiftIds.set(Std.string(giftId), true);
+        }
+
+        // Alte Gifts entfernen, die nicht mehr vorhanden sind
+        for (giftId in knownGiftIds.keys()) {
+            if (!currentGiftIds.exists(giftId)) {
+                knownGiftIds.remove(giftId);
             }
         }
 
-        return newGiftIds;
-    }
-
-    public function recordGifts(giftIds:Array<Dynamic>):Void {
-        for (giftId in giftIds) {
-            knownGiftIds.set(Std.string(giftId), true);
+        // Aktuellen Bestand übernehmen
+        for (giftId in currentGiftIds.keys()) {
+            knownGiftIds.set(giftId, true);
         }
 
         save();
     }
-
-
 }
