@@ -183,7 +183,7 @@ override public function dispose():Void {
 
     activityStore.saveGiftIds(giftIds);
 
-    context.log("Gespeicherte Gift Request IDs: " + giftIds.length);
+    context.log("Saved Gift Request IDs: " + giftIds.length);
 }
 
     // --------------------------------
@@ -247,7 +247,7 @@ override public function dispose():Void {
             }
         }
 
-        context.log("Änderungen in Gifts: " + accountIds.length);
+        context.log("Changes to Gifts: " + accountIds.length);
 
         if (accountIds.length > 0) {
             activityStore.recordActivities(accountIds);
@@ -282,6 +282,6 @@ override public function dispose():Void {
 
         context.log("Friend ID: " + Std.string(friendId));
 
-        activityStore.recordActivities(friendId);
+        activityStore.recordActivities([friendId]);;
     }
 }
