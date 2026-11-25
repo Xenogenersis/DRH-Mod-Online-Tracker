@@ -11,7 +11,7 @@ A mod for [Dungeon Rampage Haxe](https://github.com/Tutez64/Dungeon-Rampage-Haxe
 - **New Gift Detection:** Detects newly received gifts and remembers previously seen gifts.
 - **Gift Sender Tracking:** Records activity for friends who send you gifts.
 
-**Important:** Activity is only recorded while you are online in the game. The mod only tracks information that is already visible to you in-game.
+**Important:** Activity is only recorded while you are online in the game. The mod only tracks information that is already visible to you in-game and it works only on one pc.
 
 <!-- /drh:show -->
 
