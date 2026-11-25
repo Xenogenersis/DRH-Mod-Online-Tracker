@@ -20,6 +20,7 @@ class Main extends Mod {
     private var context:Context;
     private var activityStore:ActivityStore;
     private var leastActiveOverlay:LeastActiveOverlay;
+    private var friendDungeonStates:Map<UInt, UInt> = new Map();
 
 
     override public function init(context:Context):Void {
@@ -67,9 +68,18 @@ class Main extends Mod {
                 var accountIds:Array<UInt> = [];
 
                 for (accountId in keys) {
-                    if (manager.isOnline(cast accountId)) {
-                        context.log("ONLINE FRIEND ID: " + Std.string(accountId));
-                        accountIds.push(accountId);
+                    var friendId:UInt = cast accountId;
+
+                    if (manager.isOnline(friendId)) {
+                        context.log("ONLINE FRIEND ID: " + friendId);
+
+                        // Initialen Dungeon-Status speichern
+                        friendDungeonStates.set(
+                            friendId,
+                            manager.InDungeonId(friendId)
+                        );
+
+                        accountIds.push(friendId);
                     }
                 }
 
@@ -118,55 +128,90 @@ class Main extends Mod {
             loadGifts(accountInfo);
         });
     }
-}
 
-override public function dispose():Void {
-    var facade:Dynamic = Reflect.getProperty(context.core, "facade");
-    if (facade == null) return;
+    override public function dispose():Void {
+        // Save all currently online friends
+        var manager = PresenceManager.instance();
 
-    var accountInfo:Dynamic = Reflect.getProperty(facade, "dbAccountInfo");
-    if (accountInfo == null) return;
+        if (manager != null) {
+            var presence:Dynamic = Reflect.getProperty(manager, "mPresence");
 
-    var gifts:Dynamic = Reflect.getProperty(accountInfo, "gifts");
-    if (gifts == null) return;
+            if (presence != null) {
+                var keysToArray = Reflect.field(presence, "keysToArray");
 
-    var keysToArray = Reflect.field(gifts, "keysToArray");
-    var itemFor = Reflect.field(gifts, "itemFor");
+                if (keysToArray != null) {
+                    var keys:Array<Dynamic> = cast Reflect.callMethod(
+                        presence,
+                        keysToArray,
+                        []
+                    );
 
-    if (keysToArray == null || itemFor == null) return;
+                    var onlineFriends:Array<UInt> = [];
 
-    var keys:Array<Dynamic> = cast Reflect.callMethod(
-        gifts,
-        keysToArray,
-        []
-    );
+                    for (accountId in keys) {
+                        var friendId:UInt = cast accountId;
 
-    var giftIds:Array<String> = [];
+                        if (manager.isOnline(friendId)) {
+                            onlineFriends.push(friendId);
+                        }
+                    }
 
-    for (key in keys) {
-        var gift:Dynamic = Reflect.callMethod(
+                    if (onlineFriends.length > 0) {
+                        activityStore.recordActivities(onlineFriends);
+                    }
+
+                    context.log("Saved online friends: " + onlineFriends.length);
+                }
+            }
+        }
+
+        // Save gift request IDs
+        var facade:Dynamic = Reflect.getProperty(context.core, "facade");
+        if (facade == null) return;
+
+        var accountInfo:Dynamic = Reflect.getProperty(facade, "dbAccountInfo");
+        if (accountInfo == null) return;
+
+        var gifts:Dynamic = Reflect.getProperty(accountInfo, "gifts");
+        if (gifts == null) return;
+
+        var keysToArray = Reflect.field(gifts, "keysToArray");
+        var itemFor = Reflect.field(gifts, "itemFor");
+
+        if (keysToArray == null || itemFor == null) return;
+
+        var keys:Array<Dynamic> = cast Reflect.callMethod(
             gifts,
-            itemFor,
-            [key]
+            keysToArray,
+            []
         );
 
-        if (gift == null) continue;
+        var giftIds:Array<String> = [];
 
-        var requestId:Dynamic = Reflect.getProperty(gift, "mRequestId");
+        for (key in keys) {
+            var gift:Dynamic = Reflect.callMethod(
+                gifts,
+                itemFor,
+                [key]
+            );
 
-        if (requestId == null) continue;
+            if (gift == null) continue;
 
-        var id:String = Std.string(requestId);
+            var requestId:Dynamic = Reflect.getProperty(gift, "mRequestId");
 
-        if (!giftIds.contains(id)) {
-            giftIds.push(id);
+            if (requestId == null) continue;
+
+            var id:String = Std.string(requestId);
+
+            if (!giftIds.contains(id)) {
+                giftIds.push(id);
+            }
         }
+
+        activityStore.saveGiftIds(giftIds);
+
+        context.log("Saved Gift Request IDs: " + giftIds.length);
     }
-
-    activityStore.saveGiftIds(giftIds);
-
-    context.log("Saved Gift Request IDs: " + giftIds.length);
-}
 
     // --------------------------------
     // Gift handling
@@ -256,7 +301,13 @@ override public function dispose():Void {
             onFriendStatus
         );
 
+        eventComponent.addListener(
+            "REFRESH_FRIENDS_EVENT",
+            onFriendsRefresh
+        );
+
         context.log("Subscribed to FRIEND_STATUS_EVENT!");
+        context.log("Subscribed to REFRESH_FRIENDS_EVENT!");
     }
 
     private function onFriendStatus(event:Dynamic):Void {
@@ -264,6 +315,47 @@ override public function dispose():Void {
 
         context.log("Friend ID: " + Std.string(friendId));
 
-        activityStore.recordActivities([friendId]);;
+        activityStore.recordActivities([friendId]);
+    }
+
+    private function onFriendsRefresh(event:Dynamic):Void {
+        var manager = PresenceManager.instance();
+
+        if (manager == null) return;
+
+        var presence:Dynamic = Reflect.getProperty(manager, "mPresence");
+        if (presence == null) return;
+
+        var keysToArray = Reflect.field(presence, "keysToArray");
+        if (keysToArray == null) return;
+
+        var keys:Array<Dynamic> = cast Reflect.callMethod(
+            presence,
+            keysToArray,
+            []
+        );
+
+        if (keys == null) return;
+
+        for (accountId in keys) {
+            var friendId:UInt = cast accountId;
+            var dungeonId:UInt = manager.InDungeonId(friendId);
+
+            if (friendDungeonStates.exists(friendId)) {
+                var oldDungeonId:UInt = friendDungeonStates.get(friendId);
+
+                if (oldDungeonId != dungeonId) {
+                    context.log(
+                        "Friend " + friendId
+                        + " changed dungeon: "
+                        + oldDungeonId + " -> " + dungeonId
+                    );
+
+                    activityStore.recordActivities([friendId]);
+                }
+            }
+
+            friendDungeonStates.set(friendId, dungeonId);
+        }
     }
 }
