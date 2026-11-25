@@ -138,6 +138,40 @@ class Main extends Mod {
         });
     }
 
+            override public function dispose():Void {
+
+            var facade:Dynamic = Reflect.getProperty(context.core, "facade");
+
+            if (facade == null)
+                return;
+
+            var accountInfo:Dynamic = Reflect.getProperty(facade, "dbAccountInfo");
+
+            if (accountInfo == null)
+                return;
+
+            var gifts:Dynamic = Reflect.getProperty(accountInfo, "gifts");
+
+            if (gifts == null)
+                return;
+
+            var keys:Array<Dynamic> = cast Reflect.callMethod(
+                gifts,
+                Reflect.field(gifts, "keysToArray"),
+                []
+            );
+
+            var giftIds:Array<String> = [];
+
+            for (giftId in keys) {
+                giftIds.push(Std.string(giftId));
+            }
+
+            activityStore.saveGiftIds(giftIds);
+
+            context.log("Gefundene Gift-IDs:");
+        }
+
     // --------------------------------
     // Gift handling
     // --------------------------------
@@ -205,8 +239,6 @@ class Main extends Mod {
         if (accountIds.length > 0) {
             activityStore.recordActivities(accountIds);
         }
-
-        activityStore.syncGifts(requestIds);
     }
 
     // --------------------------------

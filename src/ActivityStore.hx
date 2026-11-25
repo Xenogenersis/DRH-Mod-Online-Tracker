@@ -238,24 +238,11 @@ class ActivityStore {
     }
 
 
-    public function syncGifts(giftIds:Array<Dynamic>):Void {
-        var currentGiftIds = new Map<String, Bool>();
+    public function saveGiftIds(giftIds:Array<Dynamic>):Void {
+        knownGiftIds = new Map<String, Bool>();
 
-        // Alle aktuell vorhandenen Gifts merken
         for (giftId in giftIds) {
-            currentGiftIds.set(Std.string(giftId), true);
-        }
-
-        // Alte Gifts entfernen, die nicht mehr vorhanden sind
-        for (giftId in knownGiftIds.keys()) {
-            if (!currentGiftIds.exists(giftId)) {
-                knownGiftIds.remove(giftId);
-            }
-        }
-
-        // Aktuellen Bestand übernehmen
-        for (giftId in currentGiftIds.keys()) {
-            knownGiftIds.set(giftId, true);
+            knownGiftIds.set(Std.string(giftId), true);
         }
 
         save();
