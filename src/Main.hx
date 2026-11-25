@@ -116,27 +116,9 @@ class Main extends Mod {
             context.log("Gift data successfully loaded from the server!");
 
             loadGifts(accountInfo);
-
-            var facade:Dynamic = Reflect.getProperty(context.core, "facade");
-            var eventManager:Dynamic = Reflect.getProperty(facade, "eventManager");
-
-            if (eventManager == null) {
-                context.log("ERROR: eventManager is null!");
-                return;
-            }
-
-            var event = new Event("GIFTS_LOADED_EVENT");
-
-            var dispatchMethod = Reflect.field(eventManager, "dispatchEvent");
-
-            if (dispatchMethod != null) {
-                Reflect.callMethod(eventManager, dispatchMethod, [event]);
-                context.log("GIFTS_LOADED_EVENT dispatched!");
-            } else {
-                context.log("ERROR: dispatchEvent is null!");
-            }
         });
     }
+}
 
 override public function dispose():Void {
     var facade:Dynamic = Reflect.getProperty(context.core, "facade");
