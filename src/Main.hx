@@ -138,39 +138,53 @@ class Main extends Mod {
         });
     }
 
-            override public function dispose():Void {
+override public function dispose():Void {
+    var facade:Dynamic = Reflect.getProperty(context.core, "facade");
+    if (facade == null) return;
 
-            var facade:Dynamic = Reflect.getProperty(context.core, "facade");
+    var accountInfo:Dynamic = Reflect.getProperty(facade, "dbAccountInfo");
+    if (accountInfo == null) return;
 
-            if (facade == null)
-                return;
+    var gifts:Dynamic = Reflect.getProperty(accountInfo, "gifts");
+    if (gifts == null) return;
 
-            var accountInfo:Dynamic = Reflect.getProperty(facade, "dbAccountInfo");
+    var keysToArray = Reflect.field(gifts, "keysToArray");
+    var itemFor = Reflect.field(gifts, "itemFor");
 
-            if (accountInfo == null)
-                return;
+    if (keysToArray == null || itemFor == null) return;
 
-            var gifts:Dynamic = Reflect.getProperty(accountInfo, "gifts");
+    var keys:Array<Dynamic> = cast Reflect.callMethod(
+        gifts,
+        keysToArray,
+        []
+    );
 
-            if (gifts == null)
-                return;
+    var giftIds:Array<String> = [];
 
-            var keys:Array<Dynamic> = cast Reflect.callMethod(
-                gifts,
-                Reflect.field(gifts, "keysToArray"),
-                []
-            );
+    for (key in keys) {
+        var gift:Dynamic = Reflect.callMethod(
+            gifts,
+            itemFor,
+            [key]
+        );
 
-            var giftIds:Array<String> = [];
+        if (gift == null) continue;
 
-            for (giftId in keys) {
-                giftIds.push(Std.string(giftId));
-            }
+        var requestId:Dynamic = Reflect.getProperty(gift, "mRequestId");
 
-            activityStore.saveGiftIds(giftIds);
+        if (requestId == null) continue;
 
-            context.log("Gefundene Gift-IDs:");
+        var id:String = Std.string(requestId);
+
+        if (!giftIds.contains(id)) {
+            giftIds.push(id);
         }
+    }
+
+    activityStore.saveGiftIds(giftIds);
+
+    context.log("Gespeicherte Gift Request IDs: " + giftIds.length);
+}
 
     // --------------------------------
     // Gift handling
@@ -207,7 +221,6 @@ class Main extends Mod {
         context.log("Number of gifts: " + keys.length);
 
         var giftIds:Array<String> = activityStore.getAllGiftIds();
-        var requestIds:Array<String> = [];
         var accountIds:Array<UInt> = [];
 
         for (key in keys) {
@@ -223,8 +236,6 @@ class Main extends Mod {
                 continue;
             }
 
-            requestIds.push(requestId);
-
             if (giftIds.contains(requestId)) {
                 continue;
             }
@@ -235,6 +246,8 @@ class Main extends Mod {
                 accountIds.push(accountId);
             }
         }
+
+        context.log("Änderungen in Gifts: " + accountIds.length);
 
         if (accountIds.length > 0) {
             activityStore.recordActivities(accountIds);
